@@ -9,3 +9,6 @@ changelog:
     exclude:
       - '^docs:'
       - '^refactor'
+before:
+  hooks:
+  - go get ./...
