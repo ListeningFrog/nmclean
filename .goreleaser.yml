@@ -1,0 +1,11 @@
+build:
+  main: cmd/nmclean/main.go
+  binary: nmclean
+  goos:
+    - darwin
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^refactor'
