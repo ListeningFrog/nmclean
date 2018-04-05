@@ -8,14 +8,31 @@ import (
 )
 
 var version = "none"
-var log = logging.MustGetLogger("nmclean")
 
-// Example format string. Everything except the message has a custom color
-// which is dependent on the log level. Many fields have a custom output
-// formatting too, eg. the time returns the hour down to the milli second.
-var format = logging.MustStringFormatter(
-	`%{color} %{level:.4s} %{id:03x}%{color:reset}> %{message}`,
-)
+func getLog(debug bool) * logging.Logger {
+  var log = logging.MustGetLogger("nmclean")
+
+  // Example format string. Everything except the message has a custom color
+  // which is dependent on the log level. Many fields have a custom output
+  // formatting too, eg. the time returns the hour down to the milli second.
+  var format = logging.MustStringFormatter(
+    `%{color} %{level:.4s} %{id:03x}%{color:reset}> %{message}`,
+  )
+
+  backend := logging.NewLogBackend(os.Stdout, "", 0)
+  backendFormatted := logging.NewBackendFormatter(backend, format)
+
+  backendLeveled := logging.AddModuleLevel(backendFormatted)
+
+  if debug {
+    backendLeveled.SetLevel(logging.DEBUG, "");
+  } else {
+    backendLeveled.SetLevel(logging.INFO, "");
+  }
+  logging.SetBackend(backendLeveled)
+
+  return log;
+}
 
 var (
   debug   = kingpin.Flag("debug", "Enable debug mode.").Bool()
@@ -25,10 +42,11 @@ var (
 )
 
 func main() {
-  backend := logging.NewLogBackend(os.Stdout, "", 0)
-  logging.SetBackend(logging.NewBackendFormatter(backend, format))
-
   kingpin.Version(version)
   kingpin.Parse()
+
+  log := getLog(*debug);
+
+  log.Info("Hello !");
   log.Debugf("Would ping: %s with timeout %s and count %d\n", *ip, *timeout, *count)
 }
