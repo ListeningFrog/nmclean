@@ -1,7 +1,12 @@
 package nmclean
 
 import (
-  logging "github.com/op/go-logging"
+	"os"
+	logging "github.com/op/go-logging"
+	"runtime"
+	"sync"
+	// "sync/atomic"
+	"path/filepath"
 )
 
 // Stats for a nmclean.
@@ -14,6 +19,8 @@ type Stats struct {
 type Nmcleaner struct {
 	dir   string
 	log   * logging.Logger
+	ch    chan func()
+	wg    sync.WaitGroup
 }
 
 // Option function.
@@ -31,6 +38,7 @@ func New(log * logging.Logger, options ...Option) *Nmcleaner {
 	v := &Nmcleaner{
 		dir:   ".",
 		log:   log,
+		ch:    make(chan func()),
 	}
 
 	for _, o := range options {
@@ -46,6 +54,42 @@ func (p *Nmcleaner) Nmclean() (*Stats, error) {
 	var stats Stats;
 
 	p.log.Info("Hello from nmcleaner!")
+	p.log.Debugf("- num CPUs: %d", runtime.NumCPU())
 
-	return &stats, nil
+	p.startN(1) // runtime.NumCPU())
+	defer p.stop()
+
+	err := filepath.Walk(p.dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		p.log.Debugf("> %s", path)
+		stats.FilesTotal++
+		return nil
+	})
+
+	return &stats, err
+}
+
+
+// startN starts n loops.
+func (p *Nmcleaner) startN(n int) {
+	for i := 0; i < n; i++ {
+		p.wg.Add(1)
+		go p.start()
+	}
+}
+
+// start loop.
+func (p *Nmcleaner) start() {
+	defer p.wg.Done()
+	for fn := range p.ch {
+		fn()
+	}
+}
+
+// stop loop.
+func (p *Nmcleaner) stop() {
+	close(p.ch)
+	p.wg.Wait()
 }
