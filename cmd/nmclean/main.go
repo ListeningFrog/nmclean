@@ -2,9 +2,11 @@ package main
 
 import (
   "os"
-  // "fmt"
+  "fmt"
   "gopkg.in/alecthomas/kingpin.v2"
   logging "github.com/op/go-logging"
+  "github.com/dustin/go-humanize"
+  "github.com/ListeningFrog/nmclean/pkg/nmclean"
 )
 
 var version = "none"
@@ -47,6 +49,23 @@ func main() {
 
   log := getLog(*debug);
 
-  log.Info("Hello !");
+  log.Infof("nmclean - %s", version);
   log.Debugf("Would ping: %s with timeout %s and count %d\n", *ip, *timeout, *count)
+
+  var options []nmclean.Option;
+
+  p := nmclean.New(log, options...)
+
+	stats, err := p.Nmclean()
+	if err != nil {
+		log.Fatalf("error: %s", err)
+  }
+  println()
+  defer println()
+
+  output("files total", humanize.Comma(stats.FilesTotal))
+}
+
+func output(name, val string) {
+	fmt.Printf("\x1b[1m%20s\x1b[0m %s\n", name, val)
 }
